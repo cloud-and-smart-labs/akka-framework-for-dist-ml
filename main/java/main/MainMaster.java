@@ -46,6 +46,9 @@ public class MainMaster{
         ExecutionContext ec = system.dispatcher();
         //AtomicInteger counter = new AtomicInteger();
         
+     //   DataSet ds = new DataSet(2, 1);
+	//	DataSet.createFromFile("Datasets/xor.csv", 2, 1, ",");
+        
         // Build the NNJobMessage
         DataSet trainingSet = new DataSet(2, 1);
 		trainingSet.addRow(new DataSetRow(new double[] {0, 0}, new double[] {0}));
@@ -75,7 +78,7 @@ public class MainMaster{
                  }, ec)
          		, ec);
         */ 
-		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 15, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
+		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 5, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 	//	system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task2", trainingSet, 5, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 	}
 }
