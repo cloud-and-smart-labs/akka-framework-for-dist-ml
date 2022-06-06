@@ -1,17 +1,23 @@
 package actor;
 
-import java.util.Optional;
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 import org.la4j.Matrix;
 import org.la4j.Vector;
-import org.la4j.vector.functor.VectorFunction;
+import org.la4j.matrix.dense.Basic2DMatrix;
 import org.neuroph.core.transfer.TransferFunction;
-import org.neuroph.util.TransferFunctionType;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
 import utility.NNOperationTypes;
 import utility.NNOperations;
+import utility.WorkerRegionEvent;
 
 public class NNLayer extends AbstractActor {
 	// Receives id, activation (for forward prop), parentLayer ref and corressponding PS shard id
@@ -23,8 +29,9 @@ public class NNLayer extends AbstractActor {
 	private ActorRef parentRef;
 	private ActorRef childRef;
 	private ActorRef psShardRef;
-	private Matrix layerWeights;
+	private Basic2DMatrix layerWeights;
 	private Vector activatedInput;
+	private final ActorSelection master;
 
 	// ps_id required?
 	public NNLayer(int ps_id, TransferFunction activation, ActorRef parentRef, ActorRef childRef, ActorRef psShardRef) {
@@ -34,6 +41,7 @@ public class NNLayer extends AbstractActor {
 		this.childRef = childRef;
 		this.psShardRef = psShardRef;
 		this.activatedInput = null;
+		master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
 	}
 	
 	public void setChildRef(ActorRef childRef) {
@@ -48,20 +56,56 @@ public class NNLayer extends AbstractActor {
 				.match(NNOperationTypes.ParameterRequest.class, this::weightsRequest)
 				.match(NNOperationTypes.ForwardProp.class, this::forwardProp)
 				.match(NNOperationTypes.BackProp.class, this::backProp)
-				.match(Matrix.class, this::updateWeights)
+				.match(NNOperationTypes.Predict.class, this::predict)
+			//	.match(String.class, this::updateWeights)
 				.build();
 	}
 	
-	// TODO: Method to get current layer weights. Send message of NNOperationTypes.ParameterRequest type to PS actor ref.
-	public void weightsRequest(NNOperationTypes.ParameterRequest paramReq) {
-		psShardRef.tell(paramReq, sender());
+	public void weightsRequest(NNOperationTypes.ParameterRequest paramReq) throws TimeoutException, InterruptedException {
+		Timeout timeout = Timeout.create(Duration.ofSeconds(3));
+		Future<Object> future = Patterns.ask(psShardRef, paramReq, timeout);
+		String result = (String) Await.result(future, timeout.duration());
+		if(result.length() > 0) {
+			layerWeights = (Basic2DMatrix) Matrix.fromCSV(result);	
+			sender().tell(new NNOperationTypes.ParameterResponse(), self());
+		}
 	}
 	
-	public void updateWeights(Matrix w) {
-		layerWeights = w;
-		System.out.println("Weights in layer updated " + w);
-	}
 	
+	
+	public void predict(NNOperationTypes.Predict p) {
+		System.out.println("Prediction for the data point: ");
+		Vector inputs = p.x;
+
+		if(parentRef != null) {
+			System.out.println("Has parent");
+			this.activatedInput = NNOperations.applyActivation(inputs, activation);
+		}
+		else {
+			System.out.println("No parent");
+			this.activatedInput = inputs;
+		}
+			
+		System.out.println("Activated Input: " + activatedInput) ;
+		System.out.println("Layer weights: " + layerWeights);
+		
+		// vector = vector * matrix
+		Vector outputs = this.activatedInput.multiply(layerWeights);
+		System.out.println("Output " + outputs) ;
+		// Used for backprop
+		Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
+		System.out.println("Activated Outputs " + activatedOutputs) ;
+		
+		if(childRef != null) {
+			System.out.println("Has child");
+			childRef.tell(new NNOperationTypes.Predict(outputs), getSelf());
+		}
+		else {
+
+			System.out.println("Done!");
+		}
+	}
+
 	public void forwardProp(NNOperationTypes.ForwardProp forwardParams) {
 		System.out.println("In forward prop");
 		Vector inputs = forwardParams.x;
@@ -99,10 +143,10 @@ public class NNLayer extends AbstractActor {
 			System.out.println("Delta: " + delta);
 			
 			// Outer product of delta and activatedInputs  
-			Matrix gradient = NNOperations.computeGradient(delta, this.activatedInput);
+			Basic2DMatrix gradient = NNOperations.computeGradient(delta, this.activatedInput);
 			System.out.println("Gradient: " + gradient);
 			
-			psShardRef.tell(new NNOperationTypes.Gradient(gradient), getSelf());
+			psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
 			Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, activation, this.activatedInput);
 			System.out.println("Parent Delta " + parentDelta);
 			parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
@@ -116,8 +160,8 @@ public class NNLayer extends AbstractActor {
 		
 		Matrix gradient = NNOperations.computeGradient(childDelta, this.activatedInput);
 		System.out.println("Gradient" + gradient);
-		psShardRef.tell(new NNOperationTypes.Gradient(gradient), getSelf());
-		
+		psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
+	
 		System.out.println("Layer weights" + layerWeights);
 		if(parentRef != null) {
 			System.out.println("Has parent");
@@ -127,6 +171,11 @@ public class NNLayer extends AbstractActor {
 		}
 		else {
 			System.out.println("No parent");
+			// -1 table entry here
+			String nodeHost = getContext().provider().getDefaultAddress().getHost().get();
+			System.out.println("Address of node of routee: " + nodeHost);
+			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, -1), self());
+			
 			getContext().parent().tell(new NNOperationTypes.WeightUpdate(), getSelf());
 		}
 	}

@@ -7,7 +7,6 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 import org.la4j.Matrix;
-import org.la4j.matrix.dense.Basic2DMatrix;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
 
@@ -44,18 +43,6 @@ public class NNMaster extends AbstractActor {
 	public NNMaster(ActorRef workProcessorRouter) {
 		 this.workProcessorRouter = workProcessorRouter;
 	}
-	
-	/*public String successMsg(String msg) {
-		dsActCreationCount--;
-		System.out.println("# layer actors left:" + dsActCreationCount);
-		if(dsActCreationCount == 0) { 
-			System.out.println("Data and PS actor creation success");
-			System.out.println("####: " + getSelf().path());
-		//	getSelf().tell(msg, sender());
-			return("success");
-		}
-		return("failure");
-	}*/
 	
 	public List<List<DataSetRow>> splitDataSet(NNJobMessage nnmsg) {
 		DataSet dataset = nnmsg.getDataset();
@@ -96,23 +83,19 @@ public class NNMaster extends AbstractActor {
 		
 		// Send dataset part, psRefs, activation to each routee
 		Timeout timeout = Timeout.create(Duration.ofSeconds(5));
+		int c = 0;
 		for(List<DataSetRow> ds: splitDataSets) {
-			System.out.println("Datashard init!");
-			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(ds, nnmsg.getActivation(), psRefs), timeout);
+			System.out.println("Datashard " + c + "init!");
+			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (ds), nnmsg.getActivation(), psRefs), timeout);
 			//workProcessorRouter.tell(new NNOperationTypes.DataShardParams(ds, nnmsg.getActivation(), psRefs), self());
 			String result = (String) Await.result(future, timeout.duration());
 			System.out.println("The results##########: " + result);
-			if(result != "success") 
-			    return;	  
+			if(!result.equals("success")) {
+				System.out.println("Something went wrong in layer creation");
+				return;
+			}				
+			c++;
 		}
 		System.out.println("Required actors successfully created");
 	}
-	
-	/*
-	public void getLatestWeights(NNOperationTypes.Ready r) {
-		System.out.println("Get latest weights from PS");
-		for(ActorRef dsRef: dataShrdRefs) {
-			dsRef.tell(new NNOperationTypes.WeightUpdate(), getSelf());
-		}
-	}*/
 }

@@ -17,6 +17,7 @@ import org.neuroph.core.data.DataSetRow;
 import org.neuroph.core.transfer.Sigmoid;
 import org.neuroph.util.TransferFunctionType;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import com.typesafe.config.Config;
@@ -44,41 +45,20 @@ public class MainMaster{
     	FiniteDuration interval = Duration.create(10, TimeUnit.SECONDS);
         Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
         ExecutionContext ec = system.dispatcher();
-        //AtomicInteger counter = new AtomicInteger();
         
-     //   DataSet ds = new DataSet(2, 1);
-	//	DataSet.createFromFile("Datasets/xor.csv", 2, 1, ",");
+        DataSet trainingSet = DataSet.createFromFile("/root/datasets/xor.txt", 2, 1, ",");
+		System.out.println("Dataset inited: " + trainingSet.size());
         
-        // Build the NNJobMessage
-        DataSet trainingSet = new DataSet(2, 1);
-		trainingSet.addRow(new DataSetRow(new double[] {0, 0}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 1}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 0}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 1}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 0}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 1}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 0}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 1}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 0}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 1}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 0}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 1}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 0}, new double[] {0}));
-		trainingSet.addRow(new DataSetRow(new double[] {0, 1}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 0}, new double[] {1}));
-		trainingSet.addRow(new DataSetRow(new double[] {1, 1}, new double[] {0}));
-		
 		ArrayList<Integer> layerDimensions = new ArrayList<>(List.of(2, 2, 1));
 		Sigmoid sigmoid = new Sigmoid();
         
       /*   system.scheduler().schedule(interval, interval, () -> Patterns.ask(master, new NNJobMessage("XOR_task1", trainingSet, 15, sigmoid, layerDimensions, 0.1), timeout)
          		.onComplete(result -> {
-                     System.out.println(result);
+                     System.out.println(result);do
                      return CompletableFuture.completedFuture(result);
                  }, ec)
          		, ec);
         */ 
-		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 5, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
-	//	system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task2", trainingSet, 5, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
+		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 4, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 	}
 }

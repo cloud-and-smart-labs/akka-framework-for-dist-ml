@@ -2,11 +2,12 @@ package utility;
 
 import org.la4j.Matrix;
 import org.la4j.Vector;
+import org.la4j.matrix.dense.Basic2DMatrix;
 import org.neuroph.core.transfer.TransferFunction;
 
 public class NNOperations {
-	public static Matrix computeGradient(Vector delta, Vector activatedInputs) {
-		return delta.outerProduct(activatedInputs).transpose();
+	public static Basic2DMatrix computeGradient(Vector delta, Vector activatedInputs) {
+		return (Basic2DMatrix) delta.outerProduct(activatedInputs).transpose();
 	}
 	
 	// hadamard product of delta and inputs

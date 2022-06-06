@@ -1,16 +1,16 @@
 package actor;
 
 import akka.actor.AbstractActor;
-import main.NNJobMessage;
 import utility.NNOperationTypes;
+
+import java.io.Serializable;
 
 import org.la4j.Matrix;
 import org.la4j.matrix.dense.Basic2DMatrix;
 
-public class ParameterServerShard extends AbstractActor {
+public class ParameterServerShard extends AbstractActor implements Serializable { 
 	// Receives learningRate (for weights update) and initial random weights.
-	// TODO: Some data structure to store the shard weights.
-	
+
 	private int ps_id;
 	private double learningRate;
 	private Matrix weights;
@@ -32,10 +32,12 @@ public class ParameterServerShard extends AbstractActor {
 	}
 	
 	public void getLatestParameters(NNOperationTypes.ParameterRequest paramReq) {
-		sender().tell(this.weights, getSelf());
+		System.out.println("Lastest weights are: " + this.weights);
+		sender().tell(this.weights.toCSV(), getSelf());
 	}
 	
 	public void updateWeights(NNOperationTypes.Gradient g) {
-		weights = weights.add(g.getGradient().multiply(learningRate));
+		Basic2DMatrix grad = Basic2DMatrix.fromCSV(g.getGradient());
+		weights = weights.add(grad.multiply(learningRate));
 	}
 }

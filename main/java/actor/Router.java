@@ -16,14 +16,14 @@ import utility.MasterWorkerProtocol;
 import utility.NNOperationTypes;
 import utility.WorkerProtocol;
 
-public class JobSender extends AbstractActor {
+public class Router extends AbstractActor {
 	  private ActorRef workProcessorRouter;
 	  
 	  public static Props props(ActorRef workProcessorRouter) {
-	    return Props.create(JobSender.class, workProcessorRouter);
+	    return Props.create(Router.class, workProcessorRouter);
 	  }
 	  
-	  public JobSender(ActorRef workProcessorRouter) {
+	  public Router(ActorRef workProcessorRouter) {
 	        this.workProcessorRouter = workProcessorRouter;
 	  }
 	  
@@ -41,23 +41,5 @@ public class JobSender extends AbstractActor {
 		  // NNMaster actor creation
 		  ActorRef nnMaster = getContext().actorOf(Props.create(NNMaster.class, workProcessorRouter), "nn_master" + nnmsg.getPayload());
 		  nnMaster.tell(nnmsg, self());
-		  
-		  /*
-		  Timeout timeout = Timeout.create(Duration.ofSeconds(5));
-		  System.out.println("NNMaster path: " + nnMaster.path());
-		  Future<Object> future = Patterns.ask(nnMaster, nnmsg, timeout);
-		  String result = (String) Await.result(future, timeout.duration());
-		  
-		  if(result == "success") 
-			  System.out.println("Required actors successfully created. Init training!");
-			  //nnMaster.tell(new NNOperationTypes.Ready(), getSelf());
-		  
-		  */
-		  // TODO: Send each dataPart to one routee
-		//  for(int i = 0; i < 4; i++) {
-			//  WorkerProtocol.PiCalcTask sensorDataModelTask =
-          //          new WorkerProtocol.PiCalcTask(nnmsg);
-		//  workProcessorRouter.tell(sensorDataModelTask, workAggregator);
-		  //}
 	  }
 }

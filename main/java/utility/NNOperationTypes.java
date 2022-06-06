@@ -2,7 +2,6 @@ package utility;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.la4j.Matrix;
 import org.la4j.Vector;
@@ -11,18 +10,19 @@ import org.neuroph.core.data.DataSetRow;
 import org.neuroph.core.transfer.TransferFunction;
 
 import akka.actor.ActorRef;
-import main.NNJobMessage;
 
 public interface NNOperationTypes {
+	class ParameterResponse implements NNOperationTypes, Serializable { }
 	class ParameterRequest implements NNOperationTypes, Serializable {
     }
 	
 	class Gradient implements NNOperationTypes, Serializable {
-		private Matrix gradient;
-		public Gradient(Matrix gradient) {
+		// Changing to CSV format string because of Serialization issues. Will convert back to matrix on PSShard.
+		private String gradient;
+		public Gradient(String gradient) {
 			this.gradient = gradient;
 		}
-		public Matrix getGradient() {
+		public String getGradient() {
 			return gradient;
 		}
 	}
@@ -45,17 +45,26 @@ public interface NNOperationTypes {
 			this.childDelta = childDelta;
 		}
 	}
+
+	class Predict implements NNOperationTypes, Serializable {
+		public Vector x;
+		public Predict(Vector x) {
+			this.x = x;
+		}
+	}
 	
 	class WeightUpdate implements NNOperationTypes, Serializable {}
 	class DoneUpdatingWeights implements NNOperationTypes, Serializable {}
 	class Dummy implements NNOperationTypes, Serializable {}
 	
-	class DataShardParams implements NNOperationTypes, Serializable {
-		public List<DataSetRow> dataSetPart;
+	public class DataShardParams implements NNOperationTypes, Serializable {
+		public ArrayList<DataSetRow> dataSetPart;
 		public TransferFunction activation;
 		public ArrayList<ActorRef> parameterShardRefs;
+		public int d_id;
 		
-		public DataShardParams(List<DataSetRow> dataSetPart, TransferFunction activation, ArrayList<ActorRef> parameterShardRefs) {
+		public DataShardParams(int d_id, ArrayList<DataSetRow> dataSetPart, TransferFunction activation, ArrayList<ActorRef> parameterShardRefs) {
+			this.d_id = d_id;
 			this.dataSetPart = dataSetPart;
 			this.activation = activation;
 			this.parameterShardRefs = parameterShardRefs;

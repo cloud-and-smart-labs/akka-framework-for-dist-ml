@@ -45,7 +45,7 @@ public class WorkerRegion extends AbstractActor{
         workerRegion = ClusterSharding.get(system)
                 .start(
                         "workers",
-                        JobSender.props(workProcessorRouter),
+                        Router.props(workProcessorRouter),
                         settings,
                         new WorkRegionMessageExtractor(5));
         
