@@ -72,10 +72,12 @@ public class NNMaster extends AbstractActor {
 		int n = nnmsg.getLayerDimensions().size();
 		psRefs = new ArrayList<ActorRef>();
 		System.out.println("Layer Dimensions!! " + nnmsg.getLayerDimensions());
-		
+		System.out.println("n!!:" + n);
+
 		for(int i = 0; i < n - 1; i++) {
 			int rows = nnmsg.getLayerDimensions().get(i);
 			int cols = nnmsg.getLayerDimensions().get(i+1);
+			
 			Random r = new Random();		
 			System.out.println("Creating PS shard actor for between " + i + " and " + (i+1));
 			psRefs.add(getContext().actorOf(Props.create(ParameterServerShard.class, i, nnmsg.getLearningRate(), Matrix.random(rows, cols, r)), "ps" + i));
@@ -84,9 +86,13 @@ public class NNMaster extends AbstractActor {
 		// Send dataset part, psRefs, activation to each routee
 		Timeout timeout = Timeout.create(Duration.ofSeconds(5));
 		int c = 0;
+		int lastLayerNeurons = nnmsg.getLayerDimensions().get(n-1);
+		System.out.println("layer last:" + lastLayerNeurons);
+
 		for(List<DataSetRow> ds: splitDataSets) {
 			System.out.println("Datashard " + c + "init!");
-			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (ds), nnmsg.getActivation(), psRefs), timeout);
+
+			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (ds), nnmsg.getActivation(), lastLayerNeurons, psRefs), timeout);
 			//workProcessorRouter.tell(new NNOperationTypes.DataShardParams(ds, nnmsg.getActivation(), psRefs), self());
 			String result = (String) Await.result(future, timeout.duration());
 			System.out.println("The results##########: " + result);

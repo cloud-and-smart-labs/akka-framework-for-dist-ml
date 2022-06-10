@@ -14,12 +14,18 @@ import java.util.concurrent.TimeUnit;
 
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
+import org.neuroph.core.transfer.Linear;
 import org.neuroph.core.transfer.Sigmoid;
 import org.neuroph.util.TransferFunctionType;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+
 import com.typesafe.config.Config;
 
 import actor.ClusterListener;
@@ -46,11 +52,20 @@ public class MainMaster{
         Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
         ExecutionContext ec = system.dispatcher();
         
-        DataSet trainingSet = DataSet.createFromFile("/root/datasets/xor.txt", 2, 1, ",");
+        DataSet trainingSet = DataSet.createFromFile("/root/datasets/dataset.csv", 10, 1, ",");
 		System.out.println("Dataset inited: " + trainingSet.size());
         
-		ArrayList<Integer> layerDimensions = new ArrayList<>(List.of(2, 2, 1));
+		ArrayList<Integer> layerDimensions = new ArrayList<>(List.of(10, 4, 4, 5));
 		Sigmoid sigmoid = new Sigmoid();
+
+		Properties prop = new Properties();
+		String fileName = "master.conf";
+		try (FileInputStream fis = new FileInputStream(fileName)) {
+			prop.load(fis);
+		} catch (IOException ex) {
+			System.out.println("Could not load conf file!");
+		}
+		System.out.println("#routees: " + prop.getProperty("akka.actor.deployment.nr-of-instances"));
         
       /*   system.scheduler().schedule(interval, interval, () -> Patterns.ask(master, new NNJobMessage("XOR_task1", trainingSet, 15, sigmoid, layerDimensions, 0.1), timeout)
          		.onComplete(result -> {
@@ -59,6 +74,9 @@ public class MainMaster{
                  }, ec)
          		, ec);
         */ 
-		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 4, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
+//		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 4, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
+
+		// Dataset: http://www3.dsi.uminho.pt/pcortez/forestfires/
+		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("forest_fire_task1", trainingSet, 125, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 	}
 }

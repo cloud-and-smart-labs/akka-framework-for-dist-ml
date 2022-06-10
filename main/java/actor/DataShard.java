@@ -18,6 +18,7 @@ import akka.util.Timeout;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import utility.NNOperationTypes;
+import utility.NNOperations;
 import utility.WorkerRegionEvent;
 
 public class DataShard extends AbstractActor {
@@ -33,7 +34,8 @@ public class DataShard extends AbstractActor {
 	private ArrayList<ActorRef> layerRefs; 
 	private Iterator<DataSetRow> dsIter;
 	private final ActorSelection master;
-	
+	private int lastLayerNeurons;
+
 	public DataShard() {
 		master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
 	}
@@ -65,6 +67,7 @@ public class DataShard extends AbstractActor {
 		this.dataSetPart = dsParams.dataSetPart;
 		this.activation = dsParams.activation;
 		this.parameterShardRefs = dsParams.parameterShardRefs;
+		this.lastLayerNeurons = dsParams.lastLayerNeurons;
 		dsIter = dataSetPart.iterator();
 		createLayerActors();
 	}
@@ -132,11 +135,12 @@ public class DataShard extends AbstractActor {
 			System.out.println("Address of node of routee: " + nodeHost);
 			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, 1), self());
 			
-			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, y), getSelf());
+			System.out.println("last layer neurons: " + lastLayerNeurons);
+			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, NNOperations.oneHotEncoding(y, lastLayerNeurons)), getSelf());
 		}
 		else {
 			System.out.println("Test prediction. x = (0, 1)");
-			Vector x = Vector.fromArray(new double[] {0, 0});
+			Vector x = Vector.fromArray(new double[] {2, 4, 78.2, 21.2, 32.3, 7.1, 1.2, 34, 2.7, 0});
 			layerRefs.get(0).tell(new NNOperationTypes.Predict(x), getSelf());
 		}
 	}

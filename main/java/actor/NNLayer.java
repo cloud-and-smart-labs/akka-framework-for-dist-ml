@@ -18,6 +18,7 @@ import scala.concurrent.Future;
 import utility.NNOperationTypes;
 import utility.NNOperations;
 import utility.WorkerRegionEvent;
+import utility.NNOperations;
 
 public class NNLayer extends AbstractActor {
 	// Receives id, activation (for forward prop), parentLayer ref and corressponding PS shard id
@@ -71,8 +72,6 @@ public class NNLayer extends AbstractActor {
 		}
 	}
 	
-	
-	
 	public void predict(NNOperationTypes.Predict p) {
 		System.out.println("Prediction for the data point: ");
 		Vector inputs = p.x;
@@ -110,6 +109,9 @@ public class NNLayer extends AbstractActor {
 		System.out.println("In forward prop");
 		Vector inputs = forwardParams.x;
 		Vector target = forwardParams.y;
+
+		System.out.println("~~~~~~~~~~~~~~One-hot encoded target: " + target);
+
 		System.out.println("Inputs: " + inputs + " targets: " +  target);
 		
 		if(parentRef != null) {
@@ -130,13 +132,14 @@ public class NNLayer extends AbstractActor {
 		// Used for backprop
 		Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
 		System.out.println("Activated Outputs " + activatedOutputs) ;
-		
+
 		if(childRef != null) {
 			System.out.println("Has child");
 			childRef.tell(new NNOperationTypes.ForwardProp(outputs, target), getSelf());
 		}
 		else {
 			System.out.println("No child");
+		
 			// Compute error and start backprop
 			Vector delta = NNOperations.computeError(activatedOutputs, target);
 			

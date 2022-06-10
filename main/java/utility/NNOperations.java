@@ -33,6 +33,18 @@ public class NNOperations {
 		return Vector.fromArray(actOuts);
 	}
 	
+	public static Vector oneHotEncoding(Vector x, int n) {
+		int val = (int) x.get(0);
+		Vector encodedX = Vector.zero(n);
+
+		System.out.println("+++++" + encodedX + " val :" + val + "n:" + n);
+		for(int i = 1; i <= n; i++) {
+			if(i == val)
+				encodedX.set(i-1, 1);
+		}
+		return encodedX;
+	}
+
 	public static Vector computeError(Vector x, Vector y) {
 		Vector diff =  x.subtract(y);
 		double[] error = new double[x.length()];

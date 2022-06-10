@@ -33,6 +33,7 @@ public interface NNOperationTypes {
 	class ForwardProp implements NNOperationTypes, Serializable {
 		public Vector x;
 		public Vector y;
+
 		public ForwardProp(Vector x, Vector y) {
 			this.x = x;
 			this.y = y;
@@ -62,12 +63,14 @@ public interface NNOperationTypes {
 		public TransferFunction activation;
 		public ArrayList<ActorRef> parameterShardRefs;
 		public int d_id;
+		public int lastLayerNeurons;
 		
-		public DataShardParams(int d_id, ArrayList<DataSetRow> dataSetPart, TransferFunction activation, ArrayList<ActorRef> parameterShardRefs) {
+		public DataShardParams(int d_id, ArrayList<DataSetRow> dataSetPart, TransferFunction activation, int lastLayerNeurons, ArrayList<ActorRef> parameterShardRefs) {
 			this.d_id = d_id;
 			this.dataSetPart = dataSetPart;
 			this.activation = activation;
 			this.parameterShardRefs = parameterShardRefs;
+			this.lastLayerNeurons = lastLayerNeurons;
 		}
 	}
 	
