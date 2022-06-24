@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
-import org.neuroph.core.transfer.Linear;
+import org.neuroph.core.transfer.Gaussian;
 import org.neuroph.core.transfer.Sigmoid;
 import org.neuroph.util.TransferFunctionType;
 
@@ -31,7 +31,7 @@ import com.typesafe.config.Config;
 import actor.ClusterListener;
 import actor.Master;
 import utility.configs; 
-
+import org.neuroph.core.transfer.RectifiedLinear;
 
 public class MainMaster{	
 	public static void main(String[] args) {
@@ -49,14 +49,19 @@ public class MainMaster{
         
        // master.tell(new MasterWorkerProtocol.RegisterWorkerRegion("2550", master), master);
     	FiniteDuration interval = Duration.create(10, TimeUnit.SECONDS);
-        Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
+        Timeout timeout = new Timeout(Duration.create(15, TimeUnit.SECONDS));
         ExecutionContext ec = system.dispatcher();
         
-        DataSet trainingSet = DataSet.createFromFile("/root/datasets/dataset.csv", 10, 1, ",");
+        DataSet trainingSet = DataSet.createFromFile("/root/datasets/train.csv", 10, 1, ",");
+		DataSet testSet = DataSet.createFromFile("/root/datasets/test.csv", 10, 1, ",");
+
 		System.out.println("Dataset inited: " + trainingSet.size());
+		System.out.println("Dataset inited: " + testSet.size());
         
-		ArrayList<Integer> layerDimensions = new ArrayList<>(List.of(10, 4, 4, 5));
+		ArrayList<Integer> layerDimensions = new ArrayList<>(List.of(10, 16, 8, 7));
 		Sigmoid sigmoid = new Sigmoid();
+		
+		RectifiedLinear rl  = new RectifiedLinear();
 
 		Properties prop = new Properties();
 		String fileName = "master.conf";
@@ -65,7 +70,7 @@ public class MainMaster{
 		} catch (IOException ex) {
 			System.out.println("Could not load conf file!");
 		}
-		System.out.println("#routees: " + prop.getProperty("akka.actor.deployment.nr-of-instances"));
+		System.out.println("#routees: " + prop.getProperty("akka.actor.deployment./workerRegion/workProcessorRouter.nr-of-instances"));
         
       /*   system.scheduler().schedule(interval, interval, () -> Patterns.ask(master, new NNJobMessage("XOR_task1", trainingSet, 15, sigmoid, layerDimensions, 0.1), timeout)
          		.onComplete(result -> {
@@ -76,7 +81,7 @@ public class MainMaster{
         */ 
 //		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 4, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 
-		// Dataset: http://www3.dsi.uminho.pt/pcortez/forestfires/
-		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("forest_fire_task1", trainingSet, 125, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
+		// Forest fire dataset: http://www3.dsi.uminho.pt/pcortez/forestfires/
+		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("car_task", trainingSet, testSet, 80, rl, layerDimensions, 0.5, 50), system.dispatcher(), null);
 	}
 }

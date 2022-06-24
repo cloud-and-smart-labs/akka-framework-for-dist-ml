@@ -17,8 +17,9 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import utility.NNOperationTypes;
 import utility.NNOperations;
+import utility.SoftMax;
 import utility.WorkerRegionEvent;
-import utility.NNOperations;
+
 
 public class NNLayer extends AbstractActor {
 	// Receives id, activation (for forward prop), parentLayer ref and corressponding PS shard id
@@ -57,7 +58,6 @@ public class NNLayer extends AbstractActor {
 				.match(NNOperationTypes.ParameterRequest.class, this::weightsRequest)
 				.match(NNOperationTypes.ForwardProp.class, this::forwardProp)
 				.match(NNOperationTypes.BackProp.class, this::backProp)
-				.match(NNOperationTypes.Predict.class, this::predict)
 			//	.match(String.class, this::updateWeights)
 				.build();
 	}
@@ -71,46 +71,20 @@ public class NNLayer extends AbstractActor {
 			sender().tell(new NNOperationTypes.ParameterResponse(), self());
 		}
 	}
-	
-	public void predict(NNOperationTypes.Predict p) {
-		System.out.println("Prediction for the data point: ");
-		Vector inputs = p.x;
 
-		if(parentRef != null) {
-			System.out.println("Has parent");
-			this.activatedInput = NNOperations.applyActivation(inputs, activation);
-		}
-		else {
-			System.out.println("No parent");
-			this.activatedInput = inputs;
-		}
-			
-		System.out.println("Activated Input: " + activatedInput) ;
-		System.out.println("Layer weights: " + layerWeights);
-		
-		// vector = vector * matrix
-		Vector outputs = this.activatedInput.multiply(layerWeights);
-		System.out.println("Output " + outputs) ;
-		// Used for backprop
-		Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
-		System.out.println("Activated Outputs " + activatedOutputs) ;
-		
-		if(childRef != null) {
-			System.out.println("Has child");
-			childRef.tell(new NNOperationTypes.Predict(outputs), getSelf());
-		}
-		else {
+	public int getOuputIndex(Vector x) {
+		int maxInd = 0;
+		for(int i = 0; i < x.length(); i++) 
+			if(x.get(i) > x.get(maxInd))
+				maxInd = i;
 
-			System.out.println("Done!");
-		}
+		return maxInd;
 	}
 
 	public void forwardProp(NNOperationTypes.ForwardProp forwardParams) {
 		System.out.println("In forward prop");
 		Vector inputs = forwardParams.x;
 		Vector target = forwardParams.y;
-
-		System.out.println("~~~~~~~~~~~~~~One-hot encoded target: " + target);
 
 		System.out.println("Inputs: " + inputs + " targets: " +  target);
 		
@@ -123,36 +97,52 @@ public class NNLayer extends AbstractActor {
 			this.activatedInput = inputs;
 		}
 			
-		System.out.println("Activated Input: " + activatedInput) ;
-		System.out.println("Layer weights: " + layerWeights);
+	//	System.out.println("Activated Input: " + activatedInput) ;
+	//	System.out.println("Layer weights: " + layerWeights);
 		
 		// vector = vector * matrix
 		Vector outputs = this.activatedInput.multiply(layerWeights);
 		System.out.println("Output " + outputs) ;
-		// Used for backprop
-		Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
-		System.out.println("Activated Outputs " + activatedOutputs) ;
-
+		
 		if(childRef != null) {
 			System.out.println("Has child");
-			childRef.tell(new NNOperationTypes.ForwardProp(outputs, target), getSelf());
+			childRef.tell(new NNOperationTypes.ForwardProp(outputs, target, forwardParams.isTestData), getSelf());
 		}
 		else {
 			System.out.println("No child");
-		
-			// Compute error and start backprop
-			Vector delta = NNOperations.computeError(activatedOutputs, target);
+			Vector activatedOutputs = NNOperations.applyActivation(outputs, new SoftMax(outputs));
+			System.out.println("Activated Outputs " + activatedOutputs) ;
+			System.out.println("Actual Output: " + target);
+
+			if (forwardParams.isTestData) {
+				// Compare actual and predicted label
+				DataShard.testPointCount++;
+				if(getOuputIndex(target) == getOuputIndex(activatedOutputs)) {
+					System.out.println("Correct prediction");
+					DataShard.accuracy += 1;
+				}
+				else {
+					System.out.println("Wrong prediction");
+				}
+				if(DataShard.testPointCount == DataShard.testSetPart.size()) {
+					DataShard.accuracy = (DataShard.accuracy / DataShard.testPointCount) * 100;
+					System.out.println("Accuracy of this test set part: " + DataShard.accuracy);
+				}
+				System.out.println("Done!");			
+			}
+			else{
+				// Compute error and start backprop
+				Vector delta = NNOperations.errorDerivative(activatedOutputs, target);
 			
-			System.out.println("Delta: " + delta);
-			
-			// Outer product of delta and activatedInputs  
-			Basic2DMatrix gradient = NNOperations.computeGradient(delta, this.activatedInput);
-			System.out.println("Gradient: " + gradient);
-			
-			psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
-			Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, activation, this.activatedInput);
-			System.out.println("Parent Delta " + parentDelta);
-			parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
+		//		System.out.println("Delta: " + delta);
+				// Outer product of delta and activatedInputs  
+				Basic2DMatrix gradient = NNOperations.computeGradient(delta, new SoftMax(outputs), this.activatedInput);
+		//		System.out.println("Gradient: " + gradient);
+				psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
+				Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, new SoftMax(outputs), this.activatedInput);
+				System.out.println("Parent Delta " + parentDelta);
+				parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
+			}
 		}
 	}
 	
@@ -161,15 +151,15 @@ public class NNLayer extends AbstractActor {
 		Vector childDelta = backParams.childDelta;
 		System.out.println("Child Delta " + childDelta);
 		
-		Matrix gradient = NNOperations.computeGradient(childDelta, this.activatedInput);
-		System.out.println("Gradient" + gradient);
+		Matrix gradient = NNOperations.computeGradient(childDelta, activation, this.activatedInput);
+	//	System.out.println("Gradient" + gradient);
 		psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
 	
-		System.out.println("Layer weights" + layerWeights);
+		 System.out.println("Layer weights" + layerWeights);
 		if(parentRef != null) {
 			System.out.println("Has parent");
 			Vector parentDelta = NNOperations.computeDelta(childDelta, layerWeights, activation, this.activatedInput);
-			System.out.println("Parent Delta " + parentDelta);
+	//		System.out.println("Parent Delta " + parentDelta);
 			parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
 		}
 		else {
@@ -179,7 +169,7 @@ public class NNLayer extends AbstractActor {
 			System.out.println("Address of node of routee: " + nodeHost);
 			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, -1), self());
 			
-			getContext().parent().tell(new NNOperationTypes.WeightUpdate(), getSelf());
+			getContext().parent().tell(new NNOperationTypes.WeightUpdate(false), getSelf());
 		}
 	}
 }

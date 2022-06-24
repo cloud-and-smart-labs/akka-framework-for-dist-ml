@@ -1,28 +1,20 @@
 package actor;
 
 import java.net.UnknownHostException;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorSelection;
 import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent;
-import akka.util.Timeout;
-import scala.concurrent.Await;
-import scala.concurrent.duration.FiniteDuration;
 import utility.Point;
 import utility.WorkerProtocol;
 import utility.WorkerRegionEvent;
-import akka.actor.Address;
-import akka.actor.typed.ActorRef;
 
 public class PiCalc extends AbstractActor {
 	  private Cluster cluster = Cluster.get(getContext().system());	
 	  
 	  private ArrayList<Point> points;
-	  private String nodeHost;
 	  private final ActorSelection master;
 	  
 	  public PiCalc() {

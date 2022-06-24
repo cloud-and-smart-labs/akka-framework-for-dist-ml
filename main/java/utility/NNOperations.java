@@ -6,8 +6,11 @@ import org.la4j.matrix.dense.Basic2DMatrix;
 import org.neuroph.core.transfer.TransferFunction;
 
 public class NNOperations {
-	public static Basic2DMatrix computeGradient(Vector delta, Vector activatedInputs) {
-		return (Basic2DMatrix) delta.outerProduct(activatedInputs).transpose();
+	public static Basic2DMatrix computeGradient(Vector delta, TransferFunction activation, Vector activatedInputs) {
+		Vector actDerivativeOutputs = activatedInputs;
+		actDerivativeOutputs.forEach(i -> activation.getDerivative(i));
+
+		return (Basic2DMatrix) delta.outerProduct(actDerivativeOutputs.hadamardProduct(activatedInputs)).transpose();
 	}
 	
 	// hadamard product of delta and inputs
@@ -37,12 +40,14 @@ public class NNOperations {
 		int val = (int) x.get(0);
 		Vector encodedX = Vector.zero(n);
 
-		System.out.println("+++++" + encodedX + " val :" + val + "n:" + n);
-		for(int i = 1; i <= n; i++) {
+		for(int i = 0; i < n; i++) {
 			if(i == val)
-				encodedX.set(i-1, 1);
+				encodedX.set(i, 1);
 		}
 		return encodedX;
+	}
+	public static Vector errorDerivative(Vector x, Vector y) {
+		return x.subtract(y).multiply(-2);
 	}
 
 	public static Vector computeError(Vector x, Vector y) {

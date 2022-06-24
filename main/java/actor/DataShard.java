@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 
+import org.la4j.Matrix;
 import org.la4j.Vector;
 import org.neuroph.core.data.DataSetRow;
 import org.neuroph.core.transfer.TransferFunction;
@@ -29,15 +30,24 @@ public class DataShard extends AbstractActor {
 	
 	private int d_id;
 	private ArrayList<DataSetRow> dataSetPart;
+	public static ArrayList<DataSetRow> testSetPart;      // Made public and static for reference in NNLayer convenience. To check if all test points have been covered.    TO-DO: Find better way.
 	private TransferFunction activation;
 	private ArrayList<ActorRef> parameterShardRefs;
 	private ArrayList<ActorRef> layerRefs; 
 	private Iterator<DataSetRow> dsIter;
 	private final ActorSelection master;
 	private int lastLayerNeurons;
+	//private ActorSelection nnMaster;
+	public static double accuracy;
+	public static int testPointCount;
+	public int epochs;
+	public int epochCount;
 
 	public DataShard() {
 		master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
+		accuracy = 0;
+		testPointCount = 0;
+		epochCount = 0;
 	}
 	
 	@Override
@@ -46,6 +56,7 @@ public class DataShard extends AbstractActor {
 		return receiveBuilder()
 		//		.match(NNJobMessage.class, this::createLayerActors)
 				.match(NNOperationTypes.Dummy.class, this::dummy)
+				.match(NNOperationTypes.Predict.class, this::prediction)
 				.match(NNOperationTypes.WeightUpdate.class, this::fetchWeights)
 				.match(NNOperationTypes.DoneUpdatingWeights.class, this::startTraining)
 				.match(NNOperationTypes.DataShardParams.class, this::setParameters)
@@ -53,7 +64,7 @@ public class DataShard extends AbstractActor {
 				.matchAny(this::handleAny)
 				.build();
 	}
-	
+
 	private void handleAny(Object o) {
 		System.out.println("Actor received unknown message: " + o.toString());
 	}
@@ -65,18 +76,20 @@ public class DataShard extends AbstractActor {
 	public void setParameters(NNOperationTypes.DataShardParams dsParams) {
 		this.d_id = dsParams.d_id;
 		this.dataSetPart = dsParams.dataSetPart;
+		this.testSetPart = dsParams.testSetPart;
 		this.activation = dsParams.activation;
 		this.parameterShardRefs = dsParams.parameterShardRefs;
 		this.lastLayerNeurons = dsParams.lastLayerNeurons;
+		this.epochs = dsParams.epochs;
 		dsIter = dataSetPart.iterator();
-		createLayerActors();
+		createLayerActors();		
 	}
 	
 	public void successMsg(String s) {
 		System.out.println("Layer actor creation success. ****** " + self().path());
 		sender().tell("success", getSelf());
 		System.out.println("Init training!");
-		getSelf().tell(new NNOperationTypes.WeightUpdate(), getSelf());
+		getSelf().tell(new NNOperationTypes.WeightUpdate(false), getSelf());
 	}
 	
 	public void createLayerActors() {
@@ -98,14 +111,13 @@ public class DataShard extends AbstractActor {
 		for(int i = 0; i < n-1; i++) {
 			layerRefs.get(i).tell(layerRefs.get(i+1), self());
 		}
-		getSelf().tell("success", sender());
-	
-		
+		getSelf().tell("success", sender());		
 	}
 	 
 	public void fetchWeights(NNOperationTypes.WeightUpdate msg) throws TimeoutException, InterruptedException {
 		System.out.println("DS actor fetching current weights");
-		Timeout timeout = Timeout.create(Duration.ofSeconds(3));
+		Timeout timeout = Timeout.create(Duration.ofSeconds(5));
+		
 		for(ActorRef l: layerRefs) {
 			//l.tell(new NNOperationTypes.ParameterRequest(), self());
 			Future<Object> future = Patterns.ask(l, new NNOperationTypes.ParameterRequest(), timeout);
@@ -113,15 +125,16 @@ public class DataShard extends AbstractActor {
 			if(result.getClass() != NNOperationTypes.ParameterResponse.class) {
 				System.out.println("Current weights could NOT be retrieved!");
 				return;
-			}
-			
+			}	
 		}
 		System.out.println("Current weights retrieved successfully.");
-		getSelf().tell(new NNOperationTypes.DoneUpdatingWeights(), getSelf());
+		if(!msg.isTest) 
+			getSelf().tell(new NNOperationTypes.DoneUpdatingWeights(), getSelf());
 	}
 	
 	// Once weights are updated, then forwardProp is initiated
 	public void startTraining(NNOperationTypes.DoneUpdatingWeights msg) {
+		//self().tell(new NNOperationTypes.Predict(), self());
 		String nodeHost;
 		System.out.println("In startTraining method!!");
 		if(dsIter.hasNext()) {
@@ -135,13 +148,33 @@ public class DataShard extends AbstractActor {
 			System.out.println("Address of node of routee: " + nodeHost);
 			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, 1), self());
 			
-			System.out.println("last layer neurons: " + lastLayerNeurons);
-			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, NNOperations.oneHotEncoding(y, lastLayerNeurons)), getSelf());
+			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, NNOperations.oneHotEncoding(y, lastLayerNeurons), false), getSelf());
+		}
+		else if(this.epochCount++ < epochs) {
+			System.out.println("Epoch " + this.epochCount + " done");
+			dsIter = dataSetPart.iterator(); 
+			getSelf().tell(new NNOperationTypes.DoneUpdatingWeights(), getSelf());
+			
 		}
 		else {
-			System.out.println("Test prediction. x = (0, 1)");
-			Vector x = Vector.fromArray(new double[] {2, 4, 78.2, 21.2, 32.3, 7.1, 1.2, 34, 2.7, 0});
-			layerRefs.get(0).tell(new NNOperationTypes.Predict(x), getSelf());
+			NNMaster.routeeReturns++;
+			System.out.println("Routee returns so far: " + NNMaster.routeeReturns);
+			System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
+			self().tell(new NNOperationTypes.Predict(), self());
+		}
+	}
+
+	public void prediction(NNOperationTypes.Predict p) throws TimeoutException, InterruptedException {
+		// Get predictions for test dataset. Calculate accuracy
+		
+		System.out.println("Starting testing: " + testSetPart);
+		System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
+		
+		for(DataSetRow test_row: testSetPart) {
+			Vector x = Vector.fromArray(test_row.getInput());
+			Vector y = Vector.fromArray(test_row.getDesiredOutput());
+			System.out.println("Test data point: " + x + ", output: " + y);
+			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, NNOperations.oneHotEncoding(y, lastLayerNeurons), true), getSelf());
 		}
 	}
 }

@@ -23,8 +23,11 @@ import utility.NNOperationTypes;
 public class NNMaster extends AbstractActor {
 	// Receives paramters like dataset, activation, etc. 
 	// Responsible for creating data-shard and parameter-server-shard actors. Initiates the process on the routees.
+
 	ArrayList<ActorRef> psRefs;
 	private ActorRef workProcessorRouter;
+	public static int routeeReturns = 0;
+	public static DataSet testData;
 	
 	public static Props props(ActorRef workProcessorRouter) {
         return Props.create(NNMaster.class, workProcessorRouter);
@@ -35,25 +38,28 @@ public class NNMaster extends AbstractActor {
 		System.out.println("NNMaster actor received message");
 		return receiveBuilder()
 				.match(NNJobMessage.class, this::createActors)
-				//.match(NNOperationTypes.Ready.class, this::getLatestWeights)
-				//.match(String.class, this::successMsg)
+				//.match(NNOperationTypes.Predict.class, this::startTesting)
+				.matchAny(this::handleAny)
 				.build();
 	}
-	
+
+	private void handleAny(Object o) {
+		System.out.println("nnMaster received unknown message: " + o.toString());
+	}
+
 	public NNMaster(ActorRef workProcessorRouter) {
 		 this.workProcessorRouter = workProcessorRouter;
+		 
 	}
 	
-	public List<List<DataSetRow>> splitDataSet(NNJobMessage nnmsg) {
-		DataSet dataset = nnmsg.getDataset();
+	public List<List<DataSetRow>> splitDataSet(DataSet d, int sizeOfSplit) {		
 		List<List<DataSetRow>> dsSplits = new ArrayList<List<DataSetRow>>();
 
-		int sizeOfSplit = nnmsg.getDataPerReplica();
-		int numOfSplits = (int)nnmsg.getDataset().size()/sizeOfSplit;
+		int numOfSplits = (int)d.size()/sizeOfSplit;
 		
 		int j = 0;
 		while(j < numOfSplits) {
-			dsSplits.add(dataset.subList(j*sizeOfSplit, j*sizeOfSplit + sizeOfSplit));
+			dsSplits.add(d.subList(j*sizeOfSplit, j*sizeOfSplit + sizeOfSplit));
 			j += 1;
 		}
 		System.out.println(dsSplits);
@@ -62,9 +68,13 @@ public class NNMaster extends AbstractActor {
 
 	public void createActors(NNJobMessage nnmsg) throws TimeoutException, InterruptedException {
 		List<List<DataSetRow>> splitDataSets = new ArrayList<List<DataSetRow>>();
-		
+		List<List<DataSetRow>> splitTestSets = new ArrayList<List<DataSetRow>>();
+
 		// TODO: Split according to number of routees
-		splitDataSets = splitDataSet(nnmsg);
+		splitDataSets = splitDataSet(nnmsg.getDataset(), nnmsg.getDataPerReplica());
+		splitTestSets = splitDataSet(nnmsg.getTestData(), 35);
+
+		System.out.println("The sizes: " + splitDataSets.size() + "," +splitTestSets.size());
 		
 		System.out.println("Number of datasets: " + splitDataSets.size());
 		
@@ -72,28 +82,36 @@ public class NNMaster extends AbstractActor {
 		int n = nnmsg.getLayerDimensions().size();
 		psRefs = new ArrayList<ActorRef>();
 		System.out.println("Layer Dimensions!! " + nnmsg.getLayerDimensions());
-		System.out.println("n!!:" + n);
 
 		for(int i = 0; i < n - 1; i++) {
 			int rows = nnmsg.getLayerDimensions().get(i);
 			int cols = nnmsg.getLayerDimensions().get(i+1);
-			
-			Random r = new Random();		
+
+			System.out.println(rows + ", " + cols);
+			Random r = new Random();
+			double[][] weightMat = new double[rows][cols];
+
+			// Generate random 2D array [-1, 1] of row x col
+			for(int a = 0; a < rows; a++) {
+				for(int b = 0; b < cols; b++) {
+					weightMat[a][b] = r.nextDouble() * 2 - 1;
+				}
+			}
+
 			System.out.println("Creating PS shard actor for between " + i + " and " + (i+1));
-			psRefs.add(getContext().actorOf(Props.create(ParameterServerShard.class, i, nnmsg.getLearningRate(), Matrix.random(rows, cols, r)), "ps" + i));
+			psRefs.add(getContext().actorOf(Props.create(ParameterServerShard.class, i, nnmsg.getLearningRate(), Matrix.from2DArray(weightMat)), "ps" + i));
 		}
 		
 		// Send dataset part, psRefs, activation to each routee
 		Timeout timeout = Timeout.create(Duration.ofSeconds(5));
 		int c = 0;
 		int lastLayerNeurons = nnmsg.getLayerDimensions().get(n-1);
-		System.out.println("layer last:" + lastLayerNeurons);
 
-		for(List<DataSetRow> ds: splitDataSets) {
+		for(int j = 0; j < splitDataSets.size(); j++) {
 			System.out.println("Datashard " + c + "init!");
-
-			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (ds), nnmsg.getActivation(), lastLayerNeurons, psRefs), timeout);
-			//workProcessorRouter.tell(new NNOperationTypes.DataShardParams(ds, nnmsg.getActivation(), psRefs), self());
+		//	System.out.println("Split data: " + splitTestSets.get(j) + "\n" + splitDataSets.get(j));
+			System.out.println("&&&&&&&&&&&: " + workProcessorRouter.path());
+			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (splitDataSets.get(j)), new ArrayList<DataSetRow> (splitTestSets.get(j)), nnmsg.getActivation(), lastLayerNeurons, nnmsg.getNumOfEpoch(), psRefs), timeout);
 			String result = (String) Await.result(future, timeout.duration());
 			System.out.println("The results##########: " + result);
 			if(!result.equals("success")) {
@@ -103,5 +121,6 @@ public class NNMaster extends AbstractActor {
 			c++;
 		}
 		System.out.println("Required actors successfully created");
+	//	System.out.println("<<<<<<<<<<<<<<<<<" + self().path());
 	}
 }

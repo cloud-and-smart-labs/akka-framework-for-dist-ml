@@ -1,45 +1,47 @@
 package actor;
 
-import java.time.Duration;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeoutException;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
 import main.NNJobMessage;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import utility.MasterWorkerProtocol;
 import utility.NNOperationTypes;
-import utility.WorkerProtocol;
 
 public class Router extends AbstractActor {
 	  private ActorRef workProcessorRouter;
-	  
+	  private ActorRef nnMaster;
+	  private int routeeReturns;
+
 	  public static Props props(ActorRef workProcessorRouter) {
 	    return Props.create(Router.class, workProcessorRouter);
 	  }
 	  
 	  public Router(ActorRef workProcessorRouter) {
 	        this.workProcessorRouter = workProcessorRouter;
+			routeeReturns = 0;
 	  }
 	  
 	  @Override
 	    public Receive createReceive() {
 	        return receiveBuilder()
-	        	.match(NNJobMessage.class, this::sendSensorDataForProcessing)
+	        	.match(NNJobMessage.class, this::initiateJob)
+				.match(String.class, this::initiateTesting)
 	        	.build();
 	  }
 	  
-	  private void sendSensorDataForProcessing(NNJobMessage nnmsg) throws TimeoutException, InterruptedException {
-		  System.out.println("Sending job messages to routees!!");
-		  ActorRef workAggregator = getContext().actorOf(Props.create(WorkAggregator.class, 4, self()));
+	  private void initiateTesting(String s) {
+		  System.out.println("Datashard finished! In initiateTesting");
+		//  routeeReturns++;
+	///	  if(routeeReturns == 1)
+	//	  	nnMaster.tell(new NNOperationTypes.Predict(), self());
+		  //else if(routeeReturns == numRoutees)
+		  	// return weights to master
+	  }
 
+	  private void initiateJob(NNJobMessage nnmsg) throws TimeoutException, InterruptedException {
 		  // NNMaster actor creation
-		  ActorRef nnMaster = getContext().actorOf(Props.create(NNMaster.class, workProcessorRouter), "nn_master" + nnmsg.getPayload());
+		  nnMaster = getContext().actorOf(Props.create(NNMaster.class, workProcessorRouter), "nn_master" + nnmsg.getPayload());
 		  nnMaster.tell(nnmsg, self());
 	  }
 }

@@ -33,12 +33,15 @@ public interface NNOperationTypes {
 	class ForwardProp implements NNOperationTypes, Serializable {
 		public Vector x;
 		public Vector y;
+		public boolean isTestData;
 
-		public ForwardProp(Vector x, Vector y) {
+		public ForwardProp(Vector x, Vector y, boolean isTestData) {
 			this.x = x;
 			this.y = y;
+			this.isTestData = isTestData;
 		}
 	}
+	class Predict implements NNOperationTypes, Serializable {}
 	
 	class BackProp implements NNOperationTypes, Serializable {
 		public Vector childDelta;
@@ -47,30 +50,32 @@ public interface NNOperationTypes {
 		}
 	}
 
-	class Predict implements NNOperationTypes, Serializable {
-		public Vector x;
-		public Predict(Vector x) {
-			this.x = x;
+	class WeightUpdate implements NNOperationTypes, Serializable {
+		public boolean isTest;
+		public WeightUpdate(boolean b) {
+			this.isTest = b;
 		}
 	}
-	
-	class WeightUpdate implements NNOperationTypes, Serializable {}
 	class DoneUpdatingWeights implements NNOperationTypes, Serializable {}
 	class Dummy implements NNOperationTypes, Serializable {}
 	
 	public class DataShardParams implements NNOperationTypes, Serializable {
 		public ArrayList<DataSetRow> dataSetPart;
+		public ArrayList<DataSetRow> testSetPart;
 		public TransferFunction activation;
 		public ArrayList<ActorRef> parameterShardRefs;
 		public int d_id;
 		public int lastLayerNeurons;
+		public int epochs;
 		
-		public DataShardParams(int d_id, ArrayList<DataSetRow> dataSetPart, TransferFunction activation, int lastLayerNeurons, ArrayList<ActorRef> parameterShardRefs) {
+		public DataShardParams(int d_id, ArrayList<DataSetRow> dataSetPart, ArrayList<DataSetRow> testSetPart, TransferFunction activation, int lastLayerNeurons, int epochs, ArrayList<ActorRef> parameterShardRefs) {
 			this.d_id = d_id;
 			this.dataSetPart = dataSetPart;
+			this.testSetPart = testSetPart;
 			this.activation = activation;
 			this.parameterShardRefs = parameterShardRefs;
 			this.lastLayerNeurons = lastLayerNeurons;
+			this.epochs = epochs;
 		}
 	}
 	

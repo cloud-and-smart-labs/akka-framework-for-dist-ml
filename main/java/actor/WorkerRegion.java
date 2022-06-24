@@ -17,8 +17,6 @@ import akka.pattern.Patterns;
 import akka.routing.FromConfig;
 import main.NNJobMessage;
 import utility.MasterWorkerProtocol;
-import actor.PiCalc;
-import akka.actor.ActorRefProvider;
 
 public class WorkerRegion extends AbstractActor{
 	private String regionId;

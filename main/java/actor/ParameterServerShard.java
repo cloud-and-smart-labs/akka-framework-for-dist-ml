@@ -28,16 +28,28 @@ public class ParameterServerShard extends AbstractActor implements Serializable 
 		return receiveBuilder()
 				.match(NNOperationTypes.ParameterRequest.class, this::getLatestParameters)
 				.match(NNOperationTypes.Gradient.class, this::updateWeights)
+				.match(String.class, this::setWeights)
 				.build();
 	}
 	
+	// Just for testing framework correctness
+	public void setWeights(String s) {
+		this.weights = Matrix.fromCSV(s);
+		System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ " + weights);
+		sender().tell("success", self());
+	}
+
 	public void getLatestParameters(NNOperationTypes.ParameterRequest paramReq) {
-		System.out.println("Lastest weights are: " + this.weights);
+//		System.out.println("Lastest weights are: " + this.weights);
 		sender().tell(this.weights.toCSV(), getSelf());
 	}
 	
 	public void updateWeights(NNOperationTypes.Gradient g) {
 		Basic2DMatrix grad = Basic2DMatrix.fromCSV(g.getGradient());
-		weights = weights.add(grad.multiply(learningRate));
+		weights = regularize(weights.add(grad.multiply(learningRate)));
+	}
+
+	public Matrix regularize(Matrix weights) {
+		return weights.divide(weights.manhattanNorm());
 	}
 }
