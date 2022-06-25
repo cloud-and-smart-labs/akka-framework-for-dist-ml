@@ -97,8 +97,8 @@ public class NNLayer extends AbstractActor {
 			this.activatedInput = inputs;
 		}
 			
-	//	System.out.println("Activated Input: " + activatedInput) ;
-	//	System.out.println("Layer weights: " + layerWeights);
+		System.out.println("Activated Input: " + activatedInput) ;
+		System.out.println("Layer weights: " + layerWeights);
 		
 		// vector = vector * matrix
 		Vector outputs = this.activatedInput.multiply(layerWeights);
@@ -110,8 +110,8 @@ public class NNLayer extends AbstractActor {
 		}
 		else {
 			System.out.println("No child");
-			Vector activatedOutputs = NNOperations.applyActivation(outputs, new SoftMax(outputs));
-			System.out.println("Activated Outputs " + activatedOutputs) ;
+			Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
+			System.out.println("Activated Outputs " + activatedOutputs);
 			System.out.println("Actual Output: " + target);
 
 			if (forwardParams.isTestData) {
@@ -136,10 +136,10 @@ public class NNLayer extends AbstractActor {
 			
 		//		System.out.println("Delta: " + delta);
 				// Outer product of delta and activatedInputs  
-				Basic2DMatrix gradient = NNOperations.computeGradient(delta, new SoftMax(outputs), this.activatedInput);
+				Basic2DMatrix gradient = NNOperations.computeGradient(delta, activation, this.activatedInput);
 		//		System.out.println("Gradient: " + gradient);
 				psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
-				Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, new SoftMax(outputs), this.activatedInput);
+				Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, activation, this.activatedInput);
 				System.out.println("Parent Delta " + parentDelta);
 				parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
 			}

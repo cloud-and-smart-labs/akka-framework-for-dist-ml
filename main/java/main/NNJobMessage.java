@@ -14,9 +14,7 @@ public class NNJobMessage implements Serializable {
     private ArrayList<Integer> layerDimensions;
     private double learningRate;
     private TransferFunction activation;
-	private int epochs;
-    // TODO: Add fields for activation and activationDerivative
-    
+	private int epochs;    
     
     public NNJobMessage(String payload, DataSet dataset, DataSet testSet, int dataPerReplica, TransferFunction activation, ArrayList<Integer> layerDimensions, double learningRate, int epochs) {
     	this.payload = payload;

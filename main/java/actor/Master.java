@@ -39,7 +39,6 @@ public class Master extends AbstractActor{
 			.match(NNJobMessage.class, this::handleSensorData)
 			.match(Address.class, this::addToRefsMap)
 			.match(String.class, this::newTableEntry)
-			.match(WorkerRegionEvent.JobSimulate.class, this::jobSim)
 			.match(WorkerRegionEvent.UpdateTable.class, this::updateTable)
 			.matchAny(this::handleAny)
 	        .build();
@@ -47,11 +46,6 @@ public class Master extends AbstractActor{
 	
 	private void handleAny(Object o) {
 		System.out.println("Actor received unknown message: " + o.toString());
-	}
-	
-	private void jobSim(WorkerRegionEvent.JobSimulate js) {
-		System.out.println("Job Sim Delay!");
-		getContext().system().scheduler().scheduleOnce(Duration.ofMillis(10000), self(), new WorkerRegionEvent.UpdateTable(js.getNode(), -1), getContext().system().dispatcher(), null);
 	}
 	
 	private void addToRefsMap(Address nodeHost) {
