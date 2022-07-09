@@ -115,7 +115,7 @@ public class DataShard extends AbstractActor {
 	}
 	 
 	public void fetchWeights(NNOperationTypes.WeightUpdate msg) throws TimeoutException, InterruptedException {
-		System.out.println("DS actor fetching current weights");
+	//	System.out.println("DS actor fetching current weights");
 		Timeout timeout = Timeout.create(Duration.ofSeconds(5));
 		
 		for(ActorRef l: layerRefs) {
@@ -127,7 +127,7 @@ public class DataShard extends AbstractActor {
 				return;
 			}	
 		}
-		System.out.println("Current weights retrieved successfully.");
+	//	System.out.println("Current weights retrieved successfully.");
 		if(!msg.isTest) 
 			getSelf().tell(new NNOperationTypes.DoneUpdatingWeights(), getSelf());
 	}
@@ -136,21 +136,21 @@ public class DataShard extends AbstractActor {
 	public void startTraining(NNOperationTypes.DoneUpdatingWeights msg) {
 		//self().tell(new NNOperationTypes.Predict(), self());
 		String nodeHost;
-		System.out.println("In startTraining method!!");
+		// System.out.println("In startTraining method!!");
 		if(dsIter.hasNext()) {
 			DataSetRow ds_row = dsIter.next();
-			System.out.println("Current row: " + ds_row);
+		//	System.out.println("Current row: " + ds_row);
 			Vector x = Vector.fromArray(ds_row.getInput());
 			Vector y = Vector.fromArray(ds_row.getDesiredOutput());
 
 			// +1 table entry
 			nodeHost = getContext().provider().getDefaultAddress().getHost().get();
-			System.out.println("Address of node of routee: " + nodeHost);
+	//		System.out.println("Address of node of routee: " + nodeHost);
 			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, 1), self());
 			
 			layerRefs.get(0).tell(new NNOperationTypes.ForwardProp(x, NNOperations.oneHotEncoding(y, lastLayerNeurons), false), getSelf());
 		}
-		else if(this.epochCount++ < epochs) {
+		else if(++this.epochCount < epochs) {
 			System.out.println("Epoch " + this.epochCount + " done");
 			dsIter = dataSetPart.iterator(); 
 			getSelf().tell(new NNOperationTypes.DoneUpdatingWeights(), getSelf());
@@ -159,7 +159,7 @@ public class DataShard extends AbstractActor {
 		else {
 			NNMaster.routeeReturns++;
 			System.out.println("Routee returns so far: " + NNMaster.routeeReturns);
-			System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
+		//	System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
 			self().tell(new NNOperationTypes.Predict(), self());
 		}
 	}

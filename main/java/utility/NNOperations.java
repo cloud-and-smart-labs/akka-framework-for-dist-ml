@@ -19,8 +19,8 @@ public class NNOperations {
 		Vector actDerivativeOutputs = activatedInputs;
 		actDerivativeOutputs.forEach(i -> activation.getDerivative(i));
 		
-		System.out.println("Act derivative outputs: " + actDerivativeOutputs);
-		System.out.println("Delta dimensions: " + delta.length() + " weights dimns: " + weights.rows() + ", " + weights.columns());
+	//	System.out.println("Act derivative outputs: " + actDerivativeOutputs);
+	//	System.out.println("Delta dimensions: " + delta.length() + " weights dimns: " + weights.rows() + ", " + weights.columns());
 		
 		Vector parentDelta = actDerivativeOutputs.hadamardProduct(delta.multiply(weights.transpose()));
 		return parentDelta.toColumnMatrix().toColumnVector();

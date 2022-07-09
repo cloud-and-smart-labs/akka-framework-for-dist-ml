@@ -9,22 +9,15 @@ import scala.concurrent.ExecutionContext;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
-import org.neuroph.core.transfer.Gaussian;
 import org.neuroph.core.transfer.Sigmoid;
 import org.neuroph.util.TransferFunctionType;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import com.typesafe.config.Config;
 
@@ -74,6 +67,6 @@ public class MainMaster {
 //		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("XOR_task1", trainingSet, 4, sigmoid, layerDimensions, 0.1), system.dispatcher(), null);
 
 		// Forest fire dataset: http://www3.dsi.uminho.pt/pcortez/forestfires/
-		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("iris_task", trainingSet, testSet,75, rl, layerDimensions, 0.1, 50), system.dispatcher(), null);
+		system.scheduler().scheduleOnce(interval, master, new NNJobMessage("iris_task", trainingSet, testSet, 75, 75, rl, layerDimensions, 0.1, 1), system.dispatcher(), null);
 	}
 }

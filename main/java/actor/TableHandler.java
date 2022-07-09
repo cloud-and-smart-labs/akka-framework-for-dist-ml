@@ -25,7 +25,7 @@ public class TableHandler{
 	public void updateTable(WorkerRegionEvent.UpdateTable update) {
 	//	System.out.println("In updateTable method!");
 		nodeToJobs.put(update.getKey(), nodeToJobs.get(update.getKey()) + update.getValue());
-		displayTable();
+	//	displayTable();
 	}
 	
 	public void newTableEntry(String nodeHost) {

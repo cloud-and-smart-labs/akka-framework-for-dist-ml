@@ -72,7 +72,7 @@ public class NNMaster extends AbstractActor {
 
 		// TODO: Split according to number of routees
 		splitDataSets = splitDataSet(nnmsg.getDataset(), nnmsg.getDataPerReplica());
-		splitTestSets = splitDataSet(nnmsg.getTestData(), 75);
+		splitTestSets = splitDataSet(nnmsg.getTestData(), nnmsg.getTestPerReplica());
 
 		System.out.println("The sizes: " + splitDataSets.size() + "," +splitTestSets.size());
 		

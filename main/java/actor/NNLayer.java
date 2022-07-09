@@ -82,47 +82,47 @@ public class NNLayer extends AbstractActor {
 	}
 
 	public void forwardProp(NNOperationTypes.ForwardProp forwardParams) {
-		System.out.println("In forward prop");
+//		System.out.println("In forward prop");
 		Vector inputs = forwardParams.x;
 		Vector target = forwardParams.y;
 
-		System.out.println("Inputs: " + inputs + " targets: " +  target);
+//		System.out.println("Inputs: " + inputs + " targets: " +  target);
 		
 		if(parentRef != null) {
-			System.out.println("Has parent");
+	//		System.out.println("Has parent");
 			this.activatedInput = NNOperations.applyActivation(inputs, activation);
 		}
 		else {
-			System.out.println("No parent");
+	//		System.out.println("No parent");
 			this.activatedInput = inputs;
 		}
 			
-		System.out.println("Activated Input: " + activatedInput) ;
-		System.out.println("Layer weights: " + layerWeights);
+	//	System.out.println("Activated Input: " + activatedInput) ;
+	//	System.out.println("Layer weights: " + layerWeights);
 		
 		// vector = vector * matrix
 		Vector outputs = this.activatedInput.multiply(layerWeights);
-		System.out.println("Output " + outputs) ;
+	//	System.out.println("Output " + outputs) ;
 		
 		if(childRef != null) {
-			System.out.println("Has child");
+	//		System.out.println("Has child");
 			childRef.tell(new NNOperationTypes.ForwardProp(outputs, target, forwardParams.isTestData), getSelf());
 		}
 		else {
-			System.out.println("No child");
+	//		System.out.println("No child");
 			Vector activatedOutputs = NNOperations.applyActivation(outputs, activation);
-			System.out.println("Activated Outputs " + activatedOutputs);
-			System.out.println("Actual Output: " + target);
+	//		System.out.println("Activated Outputs " + activatedOutputs);
+	//		System.out.println("Actual Output: " + target);
 
 			if (forwardParams.isTestData) {
 				// Compare actual and predicted label
 				DataShard.testPointCount++;
 				if(getOuputIndex(target) == getOuputIndex(activatedOutputs)) {
-					System.out.println("Correct prediction");
+	//				System.out.println("Correct prediction");
 					DataShard.accuracy += 1;
 				}
 				else {
-					System.out.println("Wrong prediction");
+	//				System.out.println("Wrong prediction");
 				}
 				if(DataShard.testPointCount == DataShard.testSetPart.size()) {
 					DataShard.accuracy = (DataShard.accuracy / DataShard.testPointCount) * 100;
@@ -140,33 +140,33 @@ public class NNLayer extends AbstractActor {
 		//		System.out.println("Gradient: " + gradient);
 				psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
 				Vector parentDelta = NNOperations.computeDelta(delta, layerWeights, activation, this.activatedInput);
-				System.out.println("Parent Delta " + parentDelta);
+	//			System.out.println("Parent Delta " + parentDelta);
 				parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
 			}
 		}
 	}
 	
 	public void backProp(NNOperationTypes.BackProp backParams) {
-		System.out.println("In backprop!");
+	//	System.out.println("In backprop!");
 		Vector childDelta = backParams.childDelta;
-		System.out.println("Child Delta " + childDelta);
+	//	System.out.println("Child Delta " + childDelta);
 		
 		Matrix gradient = NNOperations.computeGradient(childDelta, activation, this.activatedInput);
 	//	System.out.println("Gradient" + gradient);
 		psShardRef.tell(new NNOperationTypes.Gradient(gradient.toCSV()), getSelf());
 	
-		 System.out.println("Layer weights" + layerWeights);
+	//	 System.out.println("Layer weights" + layerWeights);
 		if(parentRef != null) {
-			System.out.println("Has parent");
+	//		System.out.println("Has parent");
 			Vector parentDelta = NNOperations.computeDelta(childDelta, layerWeights, activation, this.activatedInput);
 	//		System.out.println("Parent Delta " + parentDelta);
 			parentRef.tell(new NNOperationTypes.BackProp(parentDelta), getSelf());
 		}
 		else {
-			System.out.println("No parent");
+	//		System.out.println("No parent");
 			// -1 table entry here
 			String nodeHost = getContext().provider().getDefaultAddress().getHost().get();
-			System.out.println("Address of node of routee: " + nodeHost);
+	//		System.out.println("Address of node of routee: " + nodeHost);
 			master.tell(new WorkerRegionEvent.UpdateTable(nodeHost, -1), self());
 			
 			getContext().parent().tell(new NNOperationTypes.WeightUpdate(false), getSelf());

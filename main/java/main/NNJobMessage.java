@@ -11,21 +11,26 @@ public class NNJobMessage implements Serializable {
     private DataSet dataset;
 	private DataSet testSet;
     private int dataPerReplica;
+	private int testDataPerReplica;
     private ArrayList<Integer> layerDimensions;
     private double learningRate;
     private TransferFunction activation;
 	private int epochs;    
     
-    public NNJobMessage(String payload, DataSet dataset, DataSet testSet, int dataPerReplica, TransferFunction activation, ArrayList<Integer> layerDimensions, double learningRate, int epochs) {
+    public NNJobMessage(String payload, DataSet dataset, DataSet testSet, int dataPerReplica, int testDataPerReplica, TransferFunction activation, ArrayList<Integer> layerDimensions, double learningRate, int epochs) {
     	this.payload = payload;
         this.dataset = dataset;
         this.dataPerReplica = dataPerReplica;
+		this.testDataPerReplica = testDataPerReplica;
         this.activation = activation;
         this.layerDimensions = layerDimensions;
         this.learningRate = learningRate;
 		this.testSet = testSet;
 		this.epochs = epochs;
     }
+	public int getTestPerReplica() {
+		return testDataPerReplica;
+	}
 
 	public int getNumOfEpoch() {
 		return epochs;
