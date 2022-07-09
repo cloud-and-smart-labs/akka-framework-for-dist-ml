@@ -12,9 +12,9 @@ In order to deploy the framework on a network of fog nodes, a [docker swarm](htt
 <code>docker stack deploy akkaFramework --compose-file docker-compose.yml</code>
 
 ## Running the framework locally
-The framework can also be run locally using the gradle build tool. We build a FatJar out of the gradle project.
+The framework can also be run locally using the gradle build tool. We build a FatJar out of the gradle project. <br>
 <code>gradle clean build shadowJar</code>
 
-After the jar file has been built, actors are spun into existence.
-<code>gradle run --args="master <PORT>"</code>
+After the jar file has been built, actors are spun into existence. <br>
+<code>gradle run --args="master <PORT>"</code> <br>
 <code>gradle run --args="worker <PORT>"</code>
