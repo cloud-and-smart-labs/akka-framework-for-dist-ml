@@ -1,0 +1,5 @@
+FROM openjdk:11
+COPY build/libs/lib-deploy.jar app.jar
+
+FROM arm32v7/openjdk
+COPY /lib/build/libs/lib-deploy.jar app.jar

@@ -4,6 +4,9 @@ services:
     image: dvemuri/dist_fog_comp:distML-lnx
     ports:
       - "2550:2550"
+    volumes:
+      - /home/deepika/eclipse-workspace5/pi-akka-sharding/lib/datasets/iris_train.csv:/root/datasets/train.csv
+      - /home/deepika/eclipse-workspace5/pi-akka-sharding/lib/datasets/iris_test.csv:/root/datasets/test.csv
     environment:
       CLUSTER_PORT: 2550
       CLUSTER_IP: master
@@ -21,7 +24,6 @@ services:
     image: dvemuri/dist_fog_comp:distML-lnx
     ports:
       - "2552:2552"
-    
     environment:
       CLUSTER_PORT: 2552
       CLUSTER_IP: worker1
@@ -55,9 +57,9 @@ services:
   worker3: 
     image: dvemuri/dist_fog_comp:distML-lnx
     ports:
-      - "2554:2554"
+      - "2553:2553"
     environment:
-      CLUSTER_PORT: 2554
+      CLUSTER_PORT: 2553
       CLUSTER_IP: worker3
       SEED1_IP: worker1
       SEED2_IP: worker2
@@ -66,5 +68,5 @@ services:
     deploy:
       replicas: 1      
       placement:
-        constraints: [node.hostname == raspberrypi]
-    command: ["java","-jar","/app.jar", "worker", "2554"]
+        constraints: [node.hostname == raspi4]
+    command: ["java","-jar","/app.jar", "worker", "2553"]
