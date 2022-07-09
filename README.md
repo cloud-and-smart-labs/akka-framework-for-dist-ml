@@ -7,7 +7,7 @@ All the workers can be started on the same machine. The image the machine is run
 <code>docker-compose up</code>
 
 ### Running the framework on fog nodes
-In order to deploy the framework on a network of fog nodes, a (docker swarm) [https://docs.docker.com/engine/reference/commandline/swarm/] has to be established after which it can be deployed through:
+In order to deploy the framework on a network of fog nodes, a [docker swarm](https://docs.docker.com/engine/reference/commandline/swarm/) has to be established after which it can be deployed through:
 
 <code>docker stack deploy akkaFramework --compose-file docker-compose.yml</code>
 
