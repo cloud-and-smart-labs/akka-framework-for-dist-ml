@@ -12,7 +12,7 @@ In order to deploy the framework on a network of fog nodes, a [docker swarm](htt
 <code>docker stack deploy akkaFramework --compose-file docker-compose.yml</code>
 
 ### Running the framework locally
-The repository contains only the 'main' folder files of the gradle project. So inorder to get this working, create a new gradle project and copy the contents of this main folder in the one.
+Note: The repository contains only the 'main' folder files of the gradle project. So inorder to get this working, create a new gradle project and copy the contents of this main folder into the corressponding folder of that one.
 Once the project has been created, it can be run locally using the gradle build tool. We build a FatJar out of the gradle project. <br>
 <code>gradle clean build shadowJar</code>
 
