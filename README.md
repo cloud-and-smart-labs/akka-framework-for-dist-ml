@@ -16,9 +16,9 @@ Note: The repository contains only the 'main' folder files of the gradle project
 Once the project has been created, it can be run locally using the gradle build tool. We build a FatJar out of the gradle project. <br>
 <code>gradle clean build shadowJar</code>
 
-After the jar file has been built, actors are spun into existence. <br>
-<code>gradle run --args="master <PORT>"</code> <br>
-<code>gradle run --args="worker <PORT>"</code>
+After the jar file has been built, actors are spun into existence on specific ports. <br>
+<code>gradle run --args="master 2550"</code> <br>
+<code>gradle run --args="worker 2552"</code>
   
 ## Creating a new neural net job
 For this, an instance of NNJobMessage has to be created. For example, <br>
