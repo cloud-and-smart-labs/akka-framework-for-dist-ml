@@ -21,5 +21,6 @@ After the jar file has been built, actors are spun into existence. <br>
 <code>gradle run --args="worker <PORT>"</code>
   
 ## Creating a new neural net job
-For this, an instance of NNJobMessage has to be created. For example,
+For this, an instance of NNJobMessage has to be created. For example, <br>
 <code>new NNJobMessage("iris_task", trainingSet, testSet, 75, 75, relu, layerDimensions, 0.1, 50)</code>
+If the framework is being run through docker, the dataset has to be bind-mounted to the master service in the docker-compose.yml file. 
