@@ -158,6 +158,11 @@ public class DataShard extends AbstractActor {
 		}
 		else {
 			NNMaster.routeeReturns++;
+			if(NNMaster.routeeReturns == 1) {
+				// Send trained weights back to master.
+				ActorSelection master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
+				master.tell(new NNOperationTypes.SendWeights(parameterShardRefs), self());
+			}
 			System.out.println("Routee returns so far: " + NNMaster.routeeReturns);
 		//	System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
 			self().tell(new NNOperationTypes.Predict(), self());
@@ -165,7 +170,7 @@ public class DataShard extends AbstractActor {
 	}
 
 	public void prediction(NNOperationTypes.Predict p) throws TimeoutException, InterruptedException {
-		// Get predictions for test dataset. Calculate accuracy
+		// Get predictions for test dataset part. Calculate accuracy
 		
 		System.out.println("Starting testing: " + testSetPart);
 		System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());

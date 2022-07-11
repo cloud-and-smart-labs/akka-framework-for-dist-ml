@@ -8,9 +8,12 @@ import akka.cluster.Cluster;
 import main.NNJobMessage;
 import main.JobQueue;
 import utility.MasterWorkerProtocol;
+import utility.NNOperationTypes;
 import utility.WorkerRegionEvent;
 import utility.WorkerRegionState;
 import akka.actor.Address;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Master extends AbstractActor{	
@@ -19,6 +22,7 @@ public class Master extends AbstractActor{
     private static final MasterWorkerProtocol.WorkerRegionAck WORKER_REGION_ACK = new MasterWorkerProtocol.WorkerRegionAck();
     private final JobQueue jobQueue;
     private final TableHandler tableHandler;
+    private ArrayList<ActorRef> trainedWeights;
     private HashMap<String, ActorRef> nodetoRef = new HashMap<String, ActorRef>();
     
     public static Props props() {
@@ -39,6 +43,7 @@ public class Master extends AbstractActor{
 			.match(NNJobMessage.class, this::handleSensorData)
 			.match(Address.class, this::addToRefsMap)
 			.match(String.class, this::newTableEntry)
+            .match(NNOperationTypes.SendWeights.class, this::getTrainedWeights)
 			.match(WorkerRegionEvent.UpdateTable.class, this::updateTable)
 			.matchAny(this::handleAny)
 	        .build();
@@ -48,6 +53,11 @@ public class Master extends AbstractActor{
 		System.out.println("Actor received unknown message: " + o.toString());
 	}
 	
+    private void getTrainedWeights(NNOperationTypes.SendWeights ps)  {
+        System.out.println("Master received trained weights");
+        this.trainedWeights = ps.trainedWs;
+    }
+
 	private void addToRefsMap(Address nodeHost) {
 		nodetoRef.put(nodeHost.getHost().get(), getSender());
 	}

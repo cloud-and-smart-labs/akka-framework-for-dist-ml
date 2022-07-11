@@ -58,6 +58,12 @@ public interface NNOperationTypes {
 	}
 	class DoneUpdatingWeights implements NNOperationTypes, Serializable {}
 	class Dummy implements NNOperationTypes, Serializable {}
+	class SendWeights implements NNOperationTypes, Serializable {
+		public ArrayList<ActorRef> trainedWs;
+		public SendWeights(ArrayList<ActorRef> trainedWs) {
+			this.trainedWs = trainedWs;
+		}
+	}
 	
 	public class DataShardParams implements NNOperationTypes, Serializable {
 		public ArrayList<DataSetRow> dataSetPart;
