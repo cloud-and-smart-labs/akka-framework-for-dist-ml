@@ -108,10 +108,10 @@ public class NNMaster extends AbstractActor {
 		int lastLayerNeurons = nnmsg.getLayerDimensions().get(n-1);
 
 		for(int j = 0; j < splitDataSets.size(); j++) {
-			System.out.println("Datashard " + c + "init!");
+			System.out.println("Datashard " + c + " init!");
 		//	System.out.println("Split data: " + splitTestSets.get(j) + "\n" + splitDataSets.get(j));
-			System.out.println("&&&&&&&&&&&: " + workProcessorRouter.path());
-			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (splitDataSets.get(j)), new ArrayList<DataSetRow> (splitTestSets.get(j)), nnmsg.getActivation(), lastLayerNeurons, nnmsg.getNumOfEpoch(), psRefs), timeout);
+		//	System.out.println("&&&&&&&&&&&: " + workProcessorRouter.path());
+			Future<Object> future = Patterns.ask(workProcessorRouter, new NNOperationTypes.DataShardParams(c, new ArrayList<DataSetRow> (splitDataSets.get(j)), new ArrayList<DataSetRow> (splitTestSets.get(j)), nnmsg.getActivation(), lastLayerNeurons, nnmsg.getNumOfEpoch(), splitDataSets.size(), psRefs), timeout);
 			String result = (String) Await.result(future, timeout.duration());
 			System.out.println("The results##########: " + result);
 			if(!result.equals("success")) {

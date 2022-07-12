@@ -1,12 +1,10 @@
 package actor;
 
 import java.time.Duration;
-import akka.actor.typed.receptionist.Receptionist;
 import java.util.concurrent.CompletionStage;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.actor.ActorRefProvider;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.actor.Address;

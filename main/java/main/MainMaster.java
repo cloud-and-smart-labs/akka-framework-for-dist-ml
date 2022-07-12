@@ -3,7 +3,6 @@ package main;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.pattern.Patterns;
 import akka.util.Timeout;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.duration.Duration;
@@ -12,9 +11,6 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.concurrent.TimeUnit;
 
 import org.neuroph.core.data.DataSet;
-import org.neuroph.core.data.DataSetRow;
-import org.neuroph.core.transfer.Sigmoid;
-import org.neuroph.util.TransferFunctionType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +51,7 @@ public class MainMaster {
 		// Sigmoid sigmoid = new Sigmoid();		
 		RectifiedLinear rl  = new RectifiedLinear();
 
-		String routee_num = config.getString("akka.actor.deployment./workerRegion/workProcessorRouter.nr-of-instances");
+		int routee_num = Integer.parseInt(config.getString("akka.actor.deployment./workerRegion/workProcessorRouter.nr-of-instances"));
         
       /*   system.scheduler().schedule(interval, interval, () -> Patterns.ask(master, new NNJobMessage("XOR_task1", trainingSet, 15, sigmoid, layerDimensions, 0.1), timeout)
          		.onComplete(result -> {

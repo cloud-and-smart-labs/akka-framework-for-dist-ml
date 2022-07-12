@@ -5,10 +5,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
 
-import org.la4j.Matrix;
 import org.la4j.Vector;
 import org.neuroph.core.data.DataSetRow;
 import org.neuroph.core.transfer.TransferFunction;
+
+import com.typesafe.config.Config;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -42,12 +43,15 @@ public class DataShard extends AbstractActor {
 	public static int testPointCount;
 	public int epochs;
 	public int epochCount;
+	public int routee_num;
 
 	public DataShard() {
 		master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
 		accuracy = 0;
 		testPointCount = 0;
 		epochCount = 0;
+
+		
 	}
 	
 	@Override
@@ -81,12 +85,13 @@ public class DataShard extends AbstractActor {
 		this.parameterShardRefs = dsParams.parameterShardRefs;
 		this.lastLayerNeurons = dsParams.lastLayerNeurons;
 		this.epochs = dsParams.epochs;
+		this.routee_num = dsParams.routee_num;
 		dsIter = dataSetPart.iterator();
 		createLayerActors();		
 	}
 	
 	public void successMsg(String s) {
-		System.out.println("Layer actor creation success. ****** " + self().path());
+		System.out.println("Layer actor creation success. ****** "); // + self().path());
 		sender().tell("success", getSelf());
 		System.out.println("Init training!");
 		getSelf().tell(new NNOperationTypes.WeightUpdate(false), getSelf());
@@ -97,9 +102,8 @@ public class DataShard extends AbstractActor {
 		int n = this.parameterShardRefs.size();
 		layerRefs = new ArrayList<ActorRef>();
 		
-		System.out.println("@@@");
 		layerRefs.add(getContext().actorOf(Props.create(NNLayer.class, 0, activation, null, null, parameterShardRefs.get(0)), d_id + "layer0"));
-		System.out.println("???");
+	
 		for(int i = 1; i < n-1; i++) {
 			System.out.println("Layer: " + i);			
 			layerRefs.add(getContext().actorOf(Props.create(NNLayer.class, i, activation, layerRefs.get(i-1), null, parameterShardRefs.get(i)), d_id + "layer" + i));
@@ -158,7 +162,7 @@ public class DataShard extends AbstractActor {
 		}
 		else {
 			NNMaster.routeeReturns++;
-			if(NNMaster.routeeReturns == 1) {
+			if(NNMaster.routeeReturns == routee_num) {
 				// Send trained weights back to master.
 				ActorSelection master = getContext().actorSelection("akka://MasterSystem@master:2550/user/master");
 				master.tell(new NNOperationTypes.SendWeights(parameterShardRefs), self());
@@ -172,7 +176,7 @@ public class DataShard extends AbstractActor {
 	public void prediction(NNOperationTypes.Predict p) throws TimeoutException, InterruptedException {
 		// Get predictions for test dataset part. Calculate accuracy
 		
-		System.out.println("Starting testing: " + testSetPart);
+		System.out.println("Starting testing");
 		System.out.println("Address of node of routee: " + getContext().provider().getDefaultAddress().getHost().get());
 		
 		for(DataSetRow test_row: testSetPart) {
